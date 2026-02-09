@@ -1,0 +1,45 @@
+@startuml Product Use Case Diagram
+
+' Styling
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam usecaseBackgroundColor LightBlue
+
+title Use Case Diagram - Modul Master Product
+
+' Actors
+actor "User" as user
+
+' System boundary
+rectangle "Sistem Master Product" {
+    usecase "Lihat Daftar Product" as UC1
+    usecase "Buat Product Baru" as UC2
+    usecase "Edit Product" as UC3
+    usecase "Hapus Product" as UC4
+    usecase "Lihat Datatable (AJAX)" as UC5
+}
+
+' User relationships
+user --> UC1
+user --> UC2
+user --> UC3
+user --> UC4
+
+' Flow relationships
+UC1 ..> UC5 : <<include>>
+
+note right of UC2
+  Validasi input:
+  - name: required, string, max:255
+  - description: required, string
+  - price: required, integer
+end note
+
+note right of UC5
+  Datatable menggunakan
+  Yajra DataTables (server-side)
+  dengan kolom: name, description,
+  price, created_at, actions
+end note
+
+@enduml

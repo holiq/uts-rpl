@@ -1,0 +1,136 @@
+@startuml Customer Sequence Diagram
+
+' Styling
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title Sequence Diagram - Master Customer
+
+actor "User" as User
+participant "View\n(customers/*.blade.php)" as View
+participant "CustomerController" as Ctrl
+participant "CustomerDatatable\nController" as DT
+participant "Customer" as Model
+participant "Yajra\\DataTables" as Yajra
+database "Database" as DB
+
+== 1. Lihat Daftar Customer ==
+User -> View: Buka menu Customers
+activate View
+View -> Ctrl: index()
+activate Ctrl
+Ctrl --> View: view('customers.index')
+deactivate Ctrl
+
+View -> DT: AJAX request (server-side)
+activate DT
+DT -> Model: select('*')
+activate Model
+Model -> DB: SELECT * FROM customers
+activate DB
+DB --> Model: results
+deactivate DB
+Model --> DT: query builder
+deactivate Model
+
+DT -> Yajra: DataTables::of(data)
+activate Yajra
+Yajra -> Yajra: addIndexColumn()
+Yajra -> Yajra: addColumn('address', truncate 50)
+Yajra -> Yajra: addColumn('created_at', format)
+Yajra -> Yajra: addColumn('actions', HTML buttons)
+Yajra --> DT: JSON response
+deactivate Yajra
+DT --> View: JSON datatable data
+deactivate DT
+
+View --> User: Tampilkan datatable customer
+deactivate View
+
+== 2. Buat Customer Baru ==
+User -> View: Klik "Buat Customer Baru"
+activate View
+View -> Ctrl: create()
+activate Ctrl
+Ctrl --> View: view('customers.create')
+deactivate Ctrl
+View --> User: Tampilkan form create
+deactivate View
+
+User -> View: Submit form
+activate View
+View -> Ctrl: store(Request)
+activate Ctrl
+
+Ctrl -> Ctrl: validate(request)
+note right
+  name: required, string, max:255
+  address: required, string
+end note
+
+Ctrl -> Model: create(validated)
+activate Model
+Model -> DB: INSERT INTO customers
+activate DB
+DB --> Model: customer created
+deactivate DB
+Model --> Ctrl: customer
+deactivate Model
+
+Ctrl --> View: redirect()->route('customers.index')\n->with('success')
+deactivate Ctrl
+View --> User: Tampilkan pesan sukses
+deactivate View
+
+== 3. Edit Customer ==
+User -> View: Klik "Edit"
+activate View
+View -> Ctrl: edit(customer)
+activate Ctrl
+Ctrl --> View: view('customers.edit', customer)
+deactivate Ctrl
+View --> User: Tampilkan form edit
+deactivate View
+
+User -> View: Submit form update
+activate View
+View -> Ctrl: update(Request, customer)
+activate Ctrl
+
+Ctrl -> Ctrl: validate(request)
+
+Ctrl -> Model: update(validated)
+activate Model
+Model -> DB: UPDATE customers SET ...
+activate DB
+DB --> Model: updated
+deactivate DB
+Model --> Ctrl: OK
+deactivate Model
+
+Ctrl --> View: redirect()->route('customers.index')\n->with('success')
+deactivate Ctrl
+View --> User: Tampilkan pesan sukses
+deactivate View
+
+== 4. Hapus Customer ==
+User -> View: Klik "Hapus"
+activate View
+View -> Ctrl: destroy(customer)
+activate Ctrl
+
+Ctrl -> Model: delete()
+activate Model
+Model -> DB: DELETE FROM customers WHERE id = ?
+activate DB
+DB --> Model: deleted
+deactivate DB
+Model --> Ctrl: OK
+deactivate Model
+
+Ctrl --> View: JSON { success: true }
+deactivate Ctrl
+View --> User: Tampilkan pesan sukses
+deactivate View
+
+@enduml
