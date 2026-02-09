@@ -1,0 +1,132 @@
+@startuml Supplier Activity Diagram
+
+' Styling
+skinparam activityBackgroundColor LightBlue
+skinparam activityBorderColor Black
+skinparam activityDiamondBackgroundColor LightYellow
+skinparam activityStartColor Green
+skinparam activityEndColor Red
+
+title Activity Diagram - Master Supplier
+
+== Lihat Daftar Supplier ==
+
+|User|
+start
+:Login ke sistem;
+:Buka menu Suppliers;
+
+|System|
+:Tampilkan halaman daftar supplier;
+:Load data via AJAX (Yajra DataTables);
+note right
+  Server-side processing:
+  - Kolom: name, address, created_at
+  - Actions: Edit, Delete
+end note
+:Tampilkan datatable;
+
+|User|
+:Lihat daftar supplier;
+
+stop
+
+== Buat Supplier Baru ==
+
+|User|
+start
+:Klik "Buat Supplier Baru";
+
+|System|
+:Tampilkan form create;
+
+|User|
+:Input nama supplier;
+:Input alamat;
+:Klik "Simpan";
+
+|System|
+:Validasi input;
+note right
+  Validasi:
+  - name: required, string, max:255
+  - address: required, string
+end note
+
+if (Validasi berhasil?) then (Ya)
+  :Buat record Supplier;
+  note right
+    Supplier::create([
+      name, address
+    ])
+  end note
+
+  |User|
+  :Lihat pesan sukses;
+  :Redirect ke daftar supplier;
+
+else (Tidak)
+  |User|
+  :Lihat pesan error validasi;
+  :Kembali ke form;
+endif
+
+stop
+
+== Edit Supplier ==
+
+|User|
+start
+:Klik "Edit" pada supplier;
+
+|System|
+:Load data supplier;
+:Tampilkan form edit;
+
+|User|
+:Edit data supplier;
+:Klik "Update";
+
+|System|
+:Validasi input;
+
+if (Validasi berhasil?) then (Ya)
+  :Update record Supplier;
+  note right
+    $supplier->update([
+      name, address
+    ])
+  end note
+
+  |User|
+  :Lihat pesan sukses;
+  :Redirect ke daftar supplier;
+
+else (Tidak)
+  |User|
+  :Lihat pesan error;
+endif
+
+stop
+
+== Hapus Supplier ==
+
+|User|
+start
+:Klik "Hapus" pada supplier;
+:Konfirmasi penghapusan;
+
+|System|
+:Hapus record Supplier;
+note right
+  $supplier->delete()
+end note
+:Return JSON response;
+
+|User|
+:Lihat pesan sukses;
+:Datatable di-refresh;
+
+stop
+
+@enduml

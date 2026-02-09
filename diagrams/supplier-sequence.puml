@@ -1,0 +1,136 @@
+@startuml Supplier Sequence Diagram
+
+' Styling
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title Sequence Diagram - Master Supplier
+
+actor "User" as User
+participant "View\n(suppliers/*.blade.php)" as View
+participant "SupplierController" as Ctrl
+participant "SupplierDatatable\nController" as DT
+participant "Supplier" as Model
+participant "Yajra\\DataTables" as Yajra
+database "Database" as DB
+
+== 1. Lihat Daftar Supplier ==
+User -> View: Buka menu Suppliers
+activate View
+View -> Ctrl: index()
+activate Ctrl
+Ctrl --> View: view('suppliers.index')
+deactivate Ctrl
+
+View -> DT: AJAX request (server-side)
+activate DT
+DT -> Model: select('*')
+activate Model
+Model -> DB: SELECT * FROM suppliers
+activate DB
+DB --> Model: results
+deactivate DB
+Model --> DT: query builder
+deactivate Model
+
+DT -> Yajra: DataTables::of(data)
+activate Yajra
+Yajra -> Yajra: addIndexColumn()
+Yajra -> Yajra: addColumn('address', truncate 50)
+Yajra -> Yajra: addColumn('created_at', format)
+Yajra -> Yajra: addColumn('actions', HTML buttons)
+Yajra --> DT: JSON response
+deactivate Yajra
+DT --> View: JSON datatable data
+deactivate DT
+
+View --> User: Tampilkan datatable supplier
+deactivate View
+
+== 2. Buat Supplier Baru ==
+User -> View: Klik "Buat Supplier Baru"
+activate View
+View -> Ctrl: create()
+activate Ctrl
+Ctrl --> View: view('suppliers.create')
+deactivate Ctrl
+View --> User: Tampilkan form create
+deactivate View
+
+User -> View: Submit form
+activate View
+View -> Ctrl: store(Request)
+activate Ctrl
+
+Ctrl -> Ctrl: validate(request)
+note right
+  name: required, string, max:255
+  address: required, string
+end note
+
+Ctrl -> Model: create(validated)
+activate Model
+Model -> DB: INSERT INTO suppliers
+activate DB
+DB --> Model: supplier created
+deactivate DB
+Model --> Ctrl: supplier
+deactivate Model
+
+Ctrl --> View: redirect()->route('suppliers.index')\n->with('success')
+deactivate Ctrl
+View --> User: Tampilkan pesan sukses
+deactivate View
+
+== 3. Edit Supplier ==
+User -> View: Klik "Edit"
+activate View
+View -> Ctrl: edit(supplier)
+activate Ctrl
+Ctrl --> View: view('suppliers.edit', supplier)
+deactivate Ctrl
+View --> User: Tampilkan form edit
+deactivate View
+
+User -> View: Submit form update
+activate View
+View -> Ctrl: update(Request, supplier)
+activate Ctrl
+
+Ctrl -> Ctrl: validate(request)
+
+Ctrl -> Model: update(validated)
+activate Model
+Model -> DB: UPDATE suppliers SET ...
+activate DB
+DB --> Model: updated
+deactivate DB
+Model --> Ctrl: OK
+deactivate Model
+
+Ctrl --> View: redirect()->route('suppliers.index')\n->with('success')
+deactivate Ctrl
+View --> User: Tampilkan pesan sukses
+deactivate View
+
+== 4. Hapus Supplier ==
+User -> View: Klik "Hapus"
+activate View
+View -> Ctrl: destroy(supplier)
+activate Ctrl
+
+Ctrl -> Model: delete()
+activate Model
+Model -> DB: DELETE FROM suppliers WHERE id = ?
+activate DB
+DB --> Model: deleted
+deactivate DB
+Model --> Ctrl: OK
+deactivate Model
+
+Ctrl --> View: JSON { success: true }
+deactivate Ctrl
+View --> User: Tampilkan pesan sukses
+deactivate View
+
+@enduml

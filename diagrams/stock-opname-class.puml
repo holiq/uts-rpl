@@ -9,7 +9,7 @@ skinparam class {
     BackgroundColor<<service>> LightCyan
 }
 
-title Class Diagram - Stock Opname (Implementasi Aktual)
+title Class Diagram - Stock Opname
 
 ' Boundary (View/UI)
 class "stock-opname.blade.php" as StockOpnameView <<boundary>> {

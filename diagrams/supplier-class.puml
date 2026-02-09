@@ -1,0 +1,82 @@
+@startuml Supplier Class Diagram
+
+' Styling
+skinparam classAttributeIconSize 0
+skinparam class {
+    BackgroundColor<<boundary>> LightYellow
+    BackgroundColor<<control>> LightBlue
+    BackgroundColor<<entity>> LightGreen
+}
+
+title Class Diagram - Master Supplier
+
+' Boundary (View/UI)
+class "suppliers/*.blade.php" as SupplierView <<boundary>> {
+    + index(): tampilkanDaftarSupplier()
+    + create(): tampilkanFormBuat()
+    + edit(): tampilkanFormEdit()
+}
+
+' Control (Controller)
+class SupplierController <<control>> {
+    + index()
+    + create()
+    + store(Request)
+    + edit(Supplier)
+    + update(Request, Supplier)
+    + destroy(Supplier)
+}
+
+class SupplierDatatableController <<control>> {
+    + __invoke(Request)
+}
+
+' Entity (Domain Model)
+class Supplier <<entity>> {
+    - id: Integer
+    - name: String
+    - address: String
+    - created_at: DateTime
+    - updated_at: DateTime
+    --
+    + purchases(): HasMany
+}
+
+class Purchase <<entity>> {
+    - id: Integer
+    - supplier_id: Integer
+    - description: String
+    - qty: Integer
+    - total_price: Decimal
+    --
+    + supplier(): BelongsTo
+    + items(): HasMany
+}
+
+' External Library
+class "Yajra\\DataTables" as DataTables {
+    + of(data): DataTableEngine
+    + addIndexColumn()
+    + addColumn(name, callback)
+    + rawColumns(columns)
+    + make(true)
+}
+
+' Relationships
+SupplierView --> SupplierController : uses
+SupplierView --> SupplierDatatableController : AJAX request
+SupplierDatatableController --> DataTables : uses
+SupplierDatatableController --> Supplier : queries
+
+SupplierController --> Supplier : manages
+Supplier "1" -- "many" Purchase : has
+
+' Notes
+note right of SupplierController
+  **CRUD Sederhana:**
+  - Tidak ada service layer
+  - Langsung menggunakan Model
+  - Validasi di controller
+end note
+
+@enduml

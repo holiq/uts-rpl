@@ -1,0 +1,222 @@
+@startuml Purchase Sequence Diagram
+
+' Styling
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title Sequence Diagram - Proses Purchase
+
+actor "User" as User
+participant "View\n(purchases/*.blade.php)" as View
+participant "PurchaseController" as Ctrl
+participant "StockService" as Svc
+participant "Purchase" as PurchaseModel
+participant "PurchaseItem" as ItemModel
+participant "ProductStock" as Stock
+participant "ProductTransaction" as Trans
+database "Database" as DB
+
+== 1. Menampilkan Halaman Create Purchase ==
+User -> View: Klik "Buat Purchase Baru"
+activate View
+View -> Ctrl: create()
+activate Ctrl
+
+Ctrl -> DB: Supplier::orderBy('name')->get()
+activate DB
+DB --> Ctrl: suppliers[]
+deactivate DB
+
+Ctrl -> DB: Product::orderBy('name')->get()
+activate DB
+DB --> Ctrl: products[]
+deactivate DB
+
+Ctrl --> View: view('purchases.create', suppliers, products)
+deactivate Ctrl
+View --> User: Tampilkan form create purchase
+deactivate View
+
+== 2. Input Data Purchase ==
+User -> View: Pilih supplier, input items
+activate View
+note right
+  Form input:
+  - supplier_id
+  - description
+  - items[] (product_id, qty, price)
+end note
+View --> User: Tampilkan form
+deactivate View
+
+User -> View: Submit form
+activate View
+View -> Ctrl: store(Request)
+activate Ctrl
+
+Ctrl -> Ctrl: validate(request)
+note right
+  Validasi:
+  - supplier_id: required, exists
+  - description: required, string
+  - items: required, array, min:1
+  - items.*.product_id: required, exists
+  - items.*.qty: required, integer, min:1
+  - items.*.price: required, numeric, min:0
+end note
+
+== 3. Proses Simpan Purchase ==
+Ctrl -> DB: DB::beginTransaction()
+activate DB
+
+Ctrl -> Ctrl: Calculate totals
+note right
+  Loop items:
+  totalQty += item.qty
+  totalPrice += item.qty × item.price
+end note
+
+Ctrl -> PurchaseModel: create(supplier_id, description, qty, total_price)
+activate PurchaseModel
+PurchaseModel --> Ctrl: purchase
+deactivate PurchaseModel
+
+loop Untuk setiap item
+    Ctrl -> ItemModel: create(purchase_id, product_id, qty, price, total_price)
+    activate ItemModel
+    ItemModel --> Ctrl: purchaseItem
+    deactivate ItemModel
+
+    Ctrl -> Svc: stockIn(productId, qty, price, 'purchase')
+    activate Svc
+
+    Svc -> Trans: create(productId, qty_in=qty, type='purchase')
+    activate Trans
+    Trans --> Svc: transaction created
+    deactivate Trans
+
+    Svc -> Stock: updateStock(productId, qtyIn=qty, qtyOut=0)
+    activate Stock
+    note right
+      qty_in += qty
+      current_stock = qty_in - qty_out
+    end note
+    Stock --> Svc: stock updated
+    deactivate Stock
+
+    Svc --> Ctrl: OK
+    deactivate Svc
+end
+
+Ctrl -> DB: DB::commit()
+deactivate DB
+
+Ctrl --> View: redirect()->route('purchases.index')\n->with('success', 'Purchase created successfully!')
+deactivate Ctrl
+
+View --> User: Tampilkan pesan sukses
+deactivate View
+
+== 4. Lihat Detail Purchase ==
+User -> View: Klik purchase untuk lihat detail
+activate View
+View -> Ctrl: show(purchase)
+activate Ctrl
+
+Ctrl -> PurchaseModel: load(['supplier', 'items.product'])
+activate PurchaseModel
+PurchaseModel --> Ctrl: purchase with relations
+deactivate PurchaseModel
+
+Ctrl --> View: view('purchases.show', purchase)
+deactivate Ctrl
+View --> User: Tampilkan detail purchase
+deactivate View
+
+== 5. Update Purchase ==
+User -> View: Klik "Edit" pada purchase
+activate View
+View -> Ctrl: edit(purchase)
+activate Ctrl
+
+Ctrl -> PurchaseModel: load('items')
+Ctrl -> DB: Supplier::get(), Product::get()
+Ctrl --> View: view('purchases.edit', purchase, suppliers, products)
+deactivate Ctrl
+View --> User: Tampilkan form edit
+deactivate View
+
+User -> View: Submit form update
+activate View
+View -> Ctrl: update(Request, purchase)
+activate Ctrl
+
+Ctrl -> Ctrl: validate(request)
+
+Ctrl -> DB: DB::beginTransaction()
+activate DB
+
+Ctrl -> Ctrl: Calculate new totals
+
+Ctrl -> PurchaseModel: update(supplier_id, description, qty, total_price)
+activate PurchaseModel
+PurchaseModel --> Ctrl: OK
+deactivate PurchaseModel
+
+loop Untuk setiap item lama
+    Ctrl -> Svc: reverseStockIn(productId, qty)
+    activate Svc
+    note right
+      Kembalikan stok:
+      qty_in -= qty
+      current_stock = qty_in - qty_out
+    end note
+    Svc --> Ctrl: OK
+    deactivate Svc
+end
+
+Ctrl -> ItemModel: purchase->items()->delete()
+
+loop Untuk setiap item baru
+    Ctrl -> ItemModel: create(purchase_id, product_id, qty, price, total_price)
+    Ctrl -> Svc: stockIn(productId, qty, price, 'purchase')
+end
+
+Ctrl -> DB: DB::commit()
+deactivate DB
+
+Ctrl --> View: redirect()->route('purchases.index')\n->with('success', 'Purchase updated successfully!')
+deactivate Ctrl
+
+View --> User: Tampilkan pesan sukses
+deactivate View
+
+== 6. Hapus Purchase ==
+User -> View: Klik "Hapus" pada purchase
+activate View
+View -> Ctrl: destroy(purchase)
+activate Ctrl
+
+Ctrl -> DB: DB::beginTransaction()
+activate DB
+
+loop Untuk setiap item
+    Ctrl -> Svc: reverseStockIn(productId, qty)
+    activate Svc
+    Svc --> Ctrl: OK
+    deactivate Svc
+end
+
+Ctrl -> ItemModel: purchase->items()->delete()
+Ctrl -> PurchaseModel: purchase->delete()
+
+Ctrl -> DB: DB::commit()
+deactivate DB
+
+Ctrl --> View: JSON response { success: true }
+deactivate Ctrl
+
+View --> User: Tampilkan pesan sukses
+deactivate View
+
+@enduml

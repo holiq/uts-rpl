@@ -1,0 +1,44 @@
+@startuml Supplier Use Case Diagram
+
+' Styling
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam usecaseBackgroundColor LightBlue
+
+title Use Case Diagram - Modul Master Supplier
+
+' Actors
+actor "User" as user
+
+' System boundary
+rectangle "Sistem Master Supplier" {
+    usecase "Lihat Daftar Supplier" as UC1
+    usecase "Buat Supplier Baru" as UC2
+    usecase "Edit Supplier" as UC3
+    usecase "Hapus Supplier" as UC4
+    usecase "Lihat Datatable (AJAX)" as UC5
+}
+
+' User relationships
+user --> UC1
+user --> UC2
+user --> UC3
+user --> UC4
+
+' Flow relationships
+UC1 ..> UC5 : <<include>>
+
+note right of UC2
+  Validasi input:
+  - name: required, string, max:255
+  - address: required, string
+end note
+
+note right of UC5
+  Datatable menggunakan
+  Yajra DataTables (server-side)
+  dengan kolom: name, address,
+  created_at, actions
+end note
+
+@enduml

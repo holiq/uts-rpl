@@ -1,0 +1,215 @@
+@startuml Purchase Activity Diagram
+
+' Styling
+skinparam activityBackgroundColor LightBlue
+skinparam activityBorderColor Black
+skinparam activityDiamondBackgroundColor LightYellow
+skinparam activityStartColor Green
+skinparam activityEndColor Red
+
+title Activity Diagram - Proses Purchase
+
+|User|
+start
+:Login ke sistem;
+:Buka menu Purchases;
+
+|System|
+:Tampilkan daftar purchase;
+
+|User|
+:Klik "Buat Purchase Baru";
+
+|System|
+:Load daftar supplier;
+:Load daftar produk;
+:Tampilkan form create purchase;
+
+|User|
+:Pilih supplier;
+:Input deskripsi purchase;
+
+partition "Tambah Item Produk" {
+    repeat
+        :Pilih produk;
+        :Input quantity;
+        :Input harga per unit;
+
+        |System|
+        :Hitung subtotal item;
+        note right
+          subtotal = qty × price
+        end note
+        :Tambahkan ke daftar item;
+
+        |User|
+    repeat while (Tambah item lagi?) is (Ya) not (Tidak)
+}
+
+:Klik "Simpan Purchase";
+
+|System|
+:Validasi input;
+note right
+  Validasi:
+  - supplier_id: required, exists
+  - description: required, string
+  - items: required, array, min:1
+  - items.*.product_id: required, exists
+  - items.*.qty: required, integer, min:1
+  - items.*.price: required, numeric, min:0
+end note
+
+if (Validasi berhasil?) then (Ya)
+  :Mulai database transaction;
+
+  :Hitung total qty dan total_price;
+  note right
+    totalQty = sum(items.qty)
+    totalPrice = sum(items.qty × items.price)
+  end note
+
+  :Buat record Purchase;
+  note right
+    Purchase::create([
+      supplier_id,
+      description,
+      qty: totalQty,
+      total_price: totalPrice
+    ])
+  end note
+
+  partition "Loop Setiap Item" {
+    repeat
+      :Buat record PurchaseItem;
+      note right
+        PurchaseItem::create([
+          purchase_id,
+          product_id,
+          qty,
+          price,
+          total_price
+        ])
+      end note
+
+      :Panggil stockIn();
+      note right
+        stockService->stockIn(
+          productId,
+          qty,
+          price,
+          'purchase'
+        )
+      end note
+
+      :Buat ProductTransaction;
+      note right
+        ProductTransaction dengan:
+        - qty_in = qty
+        - type = 'purchase'
+      end note
+
+      :Update ProductStock;
+      note right
+        qty_in += qty
+        current_stock = qty_in - qty_out
+      end note
+
+    repeat while (Masih ada item?) is (Ya) not (Tidak)
+  }
+
+  :Commit database transaction;
+
+  |User|
+  :Lihat pesan sukses;
+  :Redirect ke daftar purchase;
+
+else (Tidak)
+  |User|
+  :Lihat pesan error validasi;
+  :Kembali ke form dengan input sebelumnya;
+endif
+
+stop
+
+== Proses Edit Purchase ==
+
+|User|
+start
+:Klik "Edit" pada purchase;
+
+|System|
+:Load data purchase dengan items;
+:Load daftar supplier;
+:Load daftar produk;
+:Tampilkan form edit;
+
+|User|
+:Edit data purchase;
+:Edit/tambah/hapus item;
+:Klik "Update";
+
+|System|
+:Validasi input;
+
+if (Validasi berhasil?) then (Ya)
+  :Mulai database transaction;
+
+  :Reverse stok lama;
+  note right
+    Loop setiap item lama:
+    reverseStockIn(productId, qty)
+  end note
+
+  :Hapus item lama;
+  :Update record Purchase;
+
+  partition "Loop Item Baru" {
+    repeat
+      :Buat PurchaseItem baru;
+      :Panggil stockIn();
+    repeat while (Masih ada item?) is (Ya) not (Tidak)
+  }
+
+  :Commit transaction;
+
+  |User|
+  :Lihat pesan sukses;
+
+else (Tidak)
+  |User|
+  :Lihat pesan error;
+endif
+
+stop
+
+== Proses Hapus Purchase ==
+
+|User|
+start
+:Klik "Hapus" pada purchase;
+:Konfirmasi penghapusan;
+
+|System|
+:Mulai database transaction;
+
+partition "Reverse Stok" {
+  repeat
+    :Panggil reverseStockIn();
+    note right
+      Kembalikan stok untuk
+      setiap item yang dihapus
+    end note
+  repeat while (Masih ada item?) is (Ya) not (Tidak)
+}
+
+:Hapus semua PurchaseItem;
+:Hapus Purchase;
+:Commit transaction;
+
+|User|
+:Lihat pesan sukses;
+
+stop
+
+@enduml

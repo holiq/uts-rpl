@@ -1,4 +1,4 @@
-@startuml Sale Class Diagram
+@startuml Purchase Class Diagram
 
 ' Styling
 skinparam classAttributeIconSize 0
@@ -9,27 +9,27 @@ skinparam class {
     BackgroundColor<<service>> LightCyan
 }
 
-title Class Diagram - Sale
+title Class Diagram - Purchase
 
 ' Boundary (View/UI)
-class "sales/*.blade.php" as SaleView <<boundary>> {
-    + index(): tampilkanDaftarSale()
+class "purchases/*.blade.php" as PurchaseView <<boundary>> {
+    + index(): tampilkanDaftarPurchase()
     + create(): tampilkanFormBuat()
-    + show(): tampilkanDetailSale()
+    + show(): tampilkanDetailPurchase()
     + edit(): tampilkanFormEdit()
 }
 
 ' Control (Controller)
-class SaleController <<control>> {
+class PurchaseController <<control>> {
     - stockService: StockService
     --
     + index()
     + create()
     + store(Request)
-    + show(Sale)
-    + edit(Sale)
-    + update(Request, Sale)
-    + destroy(Sale)
+    + show(Purchase)
+    + edit(Purchase)
+    + update(Request, Purchase)
+    + destroy(Purchase)
 }
 
 ' Service
@@ -45,37 +45,37 @@ class StockService <<service>> {
 }
 
 ' Entity (Domain Model)
-class Sale <<entity>> {
+class Purchase <<entity>> {
     - id: Integer
-    - customer_id: Integer
+    - supplier_id: Integer
     - description: String
     - qty: Integer
-    - total_price: Decimal
+    - total_price: Decimal <<Rupiah>>
     - created_at: DateTime
     - updated_at: DateTime
     --
-    + customer(): BelongsTo
+    + supplier(): BelongsTo
     + items(): HasMany
 }
 
-class SaleItem <<entity>> {
+class PurchaseItem <<entity>> {
     - id: Integer
-    - sale_id: Integer
+    - purchase_id: Integer
     - product_id: Integer
     - qty: Integer
-    - price: Decimal
-    - total_price: Decimal
+    - price: Decimal <<Rupiah>>
+    - total_price: Decimal <<Rupiah>>
     --
-    + sale(): BelongsTo
+    + purchase(): BelongsTo
     + product(): BelongsTo
 }
 
-class Customer <<entity>> {
+class Supplier <<entity>> {
     - id: Integer
     - name: String
     - address: String
     --
-    + sales(): HasMany
+    + purchases(): HasMany
 }
 
 class Product <<entity>> {
@@ -85,7 +85,7 @@ class Product <<entity>> {
     - price: Decimal
     --
     + productStock(): HasOne
-    + saleItems(): HasMany
+    + purchaseItems(): HasMany
 }
 
 class ProductStock <<entity>> {
@@ -113,34 +113,34 @@ class ProductTransaction <<entity>> {
 }
 
 ' Relationships
-SaleView --> SaleController : uses
-SaleController --> StockService : uses
+PurchaseView --> PurchaseController : uses
+PurchaseController --> StockService : uses
 StockService --> ProductStock : manages
 StockService --> ProductTransaction : creates
 
-Sale "1" -- "many" SaleItem : has
-Sale "many" -- "1" Customer : belongs to
-SaleItem "many" -- "1" Product : references
+Purchase "1" -- "many" PurchaseItem : has
+Purchase "many" -- "1" Supplier : belongs to
+PurchaseItem "many" -- "1" Product : references
 Product "1" -- "1" ProductStock : has
 
 ' Notes
-note right of SaleController
-  **Flow Create Sale:**
+note right of PurchaseController
+  **Flow Create Purchase:**
   1. Validasi input
   2. Hitung total qty & total_price
-  3. Buat Sale record
+  3. Buat Purchase record
   4. Loop setiap item:
-     - Buat SaleItem
-     - stockOut() untuk update stok
+     - Buat PurchaseItem
+     - stockIn() untuk update stok
   5. Commit transaction
 end note
 
 note bottom of StockService
-  **stockOut() untuk Sale:**
-  type = 'sale'
+  **stockIn() untuk Purchase:**
+  type = 'purchase'
 
-  - Buat ProductTransaction (qty_out)
-  - Update ProductStock (tambah qty_out)
+  - Buat ProductTransaction (qty_in)
+  - Update ProductStock (tambah qty_in)
   - current_stock = qty_in - qty_out
 end note
 

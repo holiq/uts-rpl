@@ -4,7 +4,7 @@
 skinparam sequenceMessageAlign center
 skinparam responseMessageBelowArrow true
 
-title Sequence Diagram - Proses Sale (Implementasi Aktual)
+title Sequence Diagram - Proses Sale
 
 actor "User" as User
 participant "View\n(sales/*.blade.php)" as View

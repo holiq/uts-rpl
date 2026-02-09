@@ -4,7 +4,7 @@
 skinparam sequenceMessageAlign center
 skinparam responseMessageBelowArrow true
 
-title Sequence Diagram - Proses Stock Opname (Implementasi Aktual)
+title Sequence Diagram - Proses Stock Opname
 
 actor "User" as User
 participant "View\n(stock-opname.blade.php)" as View
