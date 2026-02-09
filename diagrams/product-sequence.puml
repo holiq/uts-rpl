@@ -1,0 +1,137 @@
+@startuml Product Sequence Diagram
+
+' Styling
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title Sequence Diagram - Master Product
+
+actor "User" as User
+participant "View\n(products/*.blade.php)" as View
+participant "ProductController" as Ctrl
+participant "ProductDatatable\nController" as DT
+participant "Product" as Model
+participant "Yajra\\DataTables" as Yajra
+database "Database" as DB
+
+== 1. Lihat Daftar Product ==
+User -> View: Buka menu Products
+activate View
+View -> Ctrl: index()
+activate Ctrl
+Ctrl --> View: view('products.index')
+deactivate Ctrl
+
+View -> DT: AJAX request (server-side)
+activate DT
+DT -> Model: select('*')
+activate Model
+Model -> DB: SELECT * FROM products
+activate DB
+DB --> Model: results
+deactivate DB
+Model --> DT: query builder
+deactivate Model
+
+DT -> Yajra: DataTables::of(data)
+activate Yajra
+Yajra -> Yajra: addIndexColumn()
+Yajra -> Yajra: addColumn('description', truncate 50)
+Yajra -> Yajra: addColumn('created_at', format)
+Yajra -> Yajra: addColumn('actions', HTML buttons)
+Yajra --> DT: JSON response
+deactivate Yajra
+DT --> View: JSON datatable data
+deactivate DT
+
+View --> User: Tampilkan datatable product
+deactivate View
+
+== 2. Buat Product Baru ==
+User -> View: Klik "Buat Product Baru"
+activate View
+View -> Ctrl: create()
+activate Ctrl
+Ctrl --> View: view('products.create')
+deactivate Ctrl
+View --> User: Tampilkan form create
+deactivate View
+
+User -> View: Submit form
+activate View
+View -> Ctrl: store(Request)
+activate Ctrl
+
+Ctrl -> Ctrl: validate(request)
+note right
+  name: required, string, max:255
+  description: required, string
+  price: required, integer
+end note
+
+Ctrl -> Model: create(validated)
+activate Model
+Model -> DB: INSERT INTO products
+activate DB
+DB --> Model: product created
+deactivate DB
+Model --> Ctrl: product
+deactivate Model
+
+Ctrl --> View: redirect()->route('products.index')\n->with('success')
+deactivate Ctrl
+View --> User: Tampilkan pesan sukses
+deactivate View
+
+== 3. Edit Product ==
+User -> View: Klik "Edit"
+activate View
+View -> Ctrl: edit(product)
+activate Ctrl
+Ctrl --> View: view('products.edit', product)
+deactivate Ctrl
+View --> User: Tampilkan form edit
+deactivate View
+
+User -> View: Submit form update
+activate View
+View -> Ctrl: update(Request, product)
+activate Ctrl
+
+Ctrl -> Ctrl: validate(request)
+
+Ctrl -> Model: update(validated)
+activate Model
+Model -> DB: UPDATE products SET ...
+activate DB
+DB --> Model: updated
+deactivate DB
+Model --> Ctrl: OK
+deactivate Model
+
+Ctrl --> View: redirect()->route('products.index')\n->with('success')
+deactivate Ctrl
+View --> User: Tampilkan pesan sukses
+deactivate View
+
+== 4. Hapus Product ==
+User -> View: Klik "Hapus"
+activate View
+View -> Ctrl: destroy(product)
+activate Ctrl
+
+Ctrl -> Model: delete()
+activate Model
+Model -> DB: DELETE FROM products WHERE id = ?
+activate DB
+DB --> Model: deleted
+deactivate DB
+Model --> Ctrl: OK
+deactivate Model
+
+Ctrl --> View: JSON { success: true }
+deactivate Ctrl
+View --> User: Tampilkan pesan sukses
+deactivate View
+
+@enduml

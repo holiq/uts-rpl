@@ -1,0 +1,117 @@
+@startuml Product Class Diagram
+
+' Styling
+skinparam classAttributeIconSize 0
+skinparam class {
+    BackgroundColor<<boundary>> LightYellow
+    BackgroundColor<<control>> LightBlue
+    BackgroundColor<<entity>> LightGreen
+}
+
+title Class Diagram - Master Product
+
+' Boundary (View/UI)
+class "products/*.blade.php" as ProductView <<boundary>> {
+    + index(): tampilkanDaftarProduct()
+    + create(): tampilkanFormBuat()
+    + edit(): tampilkanFormEdit()
+}
+
+' Control (Controller)
+class ProductController <<control>> {
+    + index()
+    + create()
+    + store(Request)
+    + edit(Product)
+    + update(Request, Product)
+    + destroy(Product)
+}
+
+class ProductDatatableController <<control>> {
+    + __invoke(Request)
+}
+
+' Entity (Domain Model)
+class Product <<entity>> {
+    - id: Integer
+    - name: String
+    - description: String
+    - price: Decimal
+    - created_at: DateTime
+    - updated_at: DateTime
+    --
+    + productStock(): HasOne
+    + purchaseItems(): HasMany
+    + saleItems(): HasMany
+    + productTransactions(): HasMany
+}
+
+class ProductStock <<entity>> {
+    - product_id: Integer (PK)
+    - qty_in: Integer
+    - qty_out: Integer
+    - current_stock: Integer
+    --
+    + product(): BelongsTo
+}
+
+class PurchaseItem <<entity>> {
+    - id: Integer
+    - purchase_id: Integer
+    - product_id: Integer
+    - qty: Integer
+    - price: Decimal
+    - total_price: Decimal
+}
+
+class SaleItem <<entity>> {
+    - id: Integer
+    - sale_id: Integer
+    - product_id: Integer
+    - qty: Integer
+    - price: Decimal
+    - total_price: Decimal
+}
+
+class ProductTransaction <<entity>> {
+    - id: Integer
+    - product_id: Integer
+    - user_id: Integer
+    - qty_in: Integer
+    - qty_out: Integer
+    - type: String
+    - price: Decimal
+    - total_price: Decimal
+    - note: String
+}
+
+' External Library
+class "Yajra\\DataTables" as DataTables {
+    + of(data): DataTableEngine
+    + addIndexColumn()
+    + addColumn(name, callback)
+    + rawColumns(columns)
+    + make(true)
+}
+
+' Relationships
+ProductView --> ProductController : uses
+ProductView --> ProductDatatableController : AJAX request
+ProductDatatableController --> DataTables : uses
+ProductDatatableController --> Product : queries
+
+ProductController --> Product : manages
+Product "1" -- "1" ProductStock : has
+Product "1" -- "many" PurchaseItem : has
+Product "1" -- "many" SaleItem : has
+Product "1" -- "many" ProductTransaction : has
+
+' Notes
+note right of ProductController
+  **CRUD Sederhana:**
+  - Tidak ada service layer
+  - Langsung menggunakan Model
+  - Validasi di controller
+end note
+
+@enduml

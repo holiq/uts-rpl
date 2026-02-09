@@ -1,0 +1,132 @@
+@startuml Customer Activity Diagram
+
+' Styling
+skinparam activityBackgroundColor LightBlue
+skinparam activityBorderColor Black
+skinparam activityDiamondBackgroundColor LightYellow
+skinparam activityStartColor Green
+skinparam activityEndColor Red
+
+title Activity Diagram - Master Customer
+
+== Lihat Daftar Customer ==
+
+|User|
+start
+:Login ke sistem;
+:Buka menu Customers;
+
+|System|
+:Tampilkan halaman daftar customer;
+:Load data via AJAX (Yajra DataTables);
+note right
+  Server-side processing:
+  - Kolom: name, address, created_at
+  - Actions: Edit, Delete
+end note
+:Tampilkan datatable;
+
+|User|
+:Lihat daftar customer;
+
+stop
+
+== Buat Customer Baru ==
+
+|User|
+start
+:Klik "Buat Customer Baru";
+
+|System|
+:Tampilkan form create;
+
+|User|
+:Input nama customer;
+:Input alamat;
+:Klik "Simpan";
+
+|System|
+:Validasi input;
+note right
+  Validasi:
+  - name: required, string, max:255
+  - address: required, string
+end note
+
+if (Validasi berhasil?) then (Ya)
+  :Buat record Customer;
+  note right
+    Customer::create([
+      name, address
+    ])
+  end note
+
+  |User|
+  :Lihat pesan sukses;
+  :Redirect ke daftar customer;
+
+else (Tidak)
+  |User|
+  :Lihat pesan error validasi;
+  :Kembali ke form;
+endif
+
+stop
+
+== Edit Customer ==
+
+|User|
+start
+:Klik "Edit" pada customer;
+
+|System|
+:Load data customer;
+:Tampilkan form edit;
+
+|User|
+:Edit data customer;
+:Klik "Update";
+
+|System|
+:Validasi input;
+
+if (Validasi berhasil?) then (Ya)
+  :Update record Customer;
+  note right
+    $customer->update([
+      name, address
+    ])
+  end note
+
+  |User|
+  :Lihat pesan sukses;
+  :Redirect ke daftar customer;
+
+else (Tidak)
+  |User|
+  :Lihat pesan error;
+endif
+
+stop
+
+== Hapus Customer ==
+
+|User|
+start
+:Klik "Hapus" pada customer;
+:Konfirmasi penghapusan;
+
+|System|
+:Hapus record Customer;
+note right
+  $customer->delete()
+end note
+:Return JSON response;
+
+|User|
+:Lihat pesan sukses;
+:Datatable di-refresh;
+
+stop
+
+@enduml

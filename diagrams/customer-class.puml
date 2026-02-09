@@ -1,0 +1,82 @@
+@startuml Customer Class Diagram
+
+' Styling
+skinparam classAttributeIconSize 0
+skinparam class {
+    BackgroundColor<<boundary>> LightYellow
+    BackgroundColor<<control>> LightBlue
+    BackgroundColor<<entity>> LightGreen
+}
+
+title Class Diagram - Master Customer
+
+' Boundary (View/UI)
+class "customers/*.blade.php" as CustomerView <<boundary>> {
+    + index(): tampilkanDaftarCustomer()
+    + create(): tampilkanFormBuat()
+    + edit(): tampilkanFormEdit()
+}
+
+' Control (Controller)
+class CustomerController <<control>> {
+    + index()
+    + create()
+    + store(Request)
+    + edit(Customer)
+    + update(Request, Customer)
+    + destroy(Customer)
+}
+
+class CustomerDatatableController <<control>> {
+    + __invoke(Request)
+}
+
+' Entity (Domain Model)
+class Customer <<entity>> {
+    - id: Integer
+    - name: String
+    - address: String
+    - created_at: DateTime
+    - updated_at: DateTime
+    --
+    + sales(): HasMany
+}
+
+class Sale <<entity>> {
+    - id: Integer
+    - customer_id: Integer
+    - description: String
+    - qty: Integer
+    - total_price: Decimal
+    --
+    + customer(): BelongsTo
+    + items(): HasMany
+}
+
+' External Library
+class "Yajra\\DataTables" as DataTables {
+    + of(data): DataTableEngine
+    + addIndexColumn()
+    + addColumn(name, callback)
+    + rawColumns(columns)
+    + make(true)
+}
+
+' Relationships
+CustomerView --> CustomerController : uses
+CustomerView --> CustomerDatatableController : AJAX request
+CustomerDatatableController --> DataTables : uses
+CustomerDatatableController --> Customer : queries
+
+CustomerController --> Customer : manages
+Customer "1" -- "many" Sale : has
+
+' Notes
+note right of CustomerController
+  **CRUD Sederhana:**
+  - Tidak ada service layer
+  - Langsung menggunakan Model
+  - Validasi di controller
+end note
+
+@enduml

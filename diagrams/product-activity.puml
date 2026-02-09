@@ -1,0 +1,134 @@
+@startuml Product Activity Diagram
+
+' Styling
+skinparam activityBackgroundColor LightBlue
+skinparam activityBorderColor Black
+skinparam activityDiamondBackgroundColor LightYellow
+skinparam activityStartColor Green
+skinparam activityEndColor Red
+
+title Activity Diagram - Master Product
+
+== Lihat Daftar Product ==
+
+|User|
+start
+:Login ke sistem;
+:Buka menu Products;
+
+|System|
+:Tampilkan halaman daftar product;
+:Load data via AJAX (Yajra DataTables);
+note right
+  Server-side processing:
+  - Kolom: name, description, price, created_at
+  - Actions: Edit, Delete
+end note
+:Tampilkan datatable;
+
+|User|
+:Lihat daftar product;
+
+stop
+
+== Buat Product Baru ==
+
+|User|
+start
+:Klik "Buat Product Baru";
+
+|System|
+:Tampilkan form create;
+
+|User|
+:Input nama product;
+:Input deskripsi;
+:Input harga;
+:Klik "Simpan";
+
+|System|
+:Validasi input;
+note right
+  Validasi:
+  - name: required, string, max:255
+  - description: required, string
+  - price: required, integer
+end note
+
+if (Validasi berhasil?) then (Ya)
+  :Buat record Product;
+  note right
+    Product::create([
+      name, description, price
+    ])
+  end note
+
+  |User|
+  :Lihat pesan sukses;
+  :Redirect ke daftar product;
+
+else (Tidak)
+  |User|
+  :Lihat pesan error validasi;
+  :Kembali ke form;
+endif
+
+stop
+
+== Edit Product ==
+
+|User|
+start
+:Klik "Edit" pada product;
+
+|System|
+:Load data product;
+:Tampilkan form edit;
+
+|User|
+:Edit data product;
+:Klik "Update";
+
+|System|
+:Validasi input;
+
+if (Validasi berhasil?) then (Ya)
+  :Update record Product;
+  note right
+    $product->update([
+      name, description, price
+    ])
+  end note
+
+  |User|
+  :Lihat pesan sukses;
+  :Redirect ke daftar product;
+
+else (Tidak)
+  |User|
+  :Lihat pesan error;
+endif
+
+stop
+
+== Hapus Product ==
+
+|User|
+start
+:Klik "Hapus" pada product;
+:Konfirmasi penghapusan;
+
+|System|
+:Hapus record Product;
+note right
+  $product->delete()
+end note
+:Return JSON response;
+
+|User|
+:Lihat pesan sukses;
+:Datatable di-refresh;
+
+stop
+
+@enduml
